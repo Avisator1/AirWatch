@@ -1,197 +1,229 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import React from "react";
+import gagan from "../../assets/gagan.png";
 
-import FAQ from '../Function/FAQ';
-
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import { Line } from 'react-chartjs-2';
-
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import useCoordinate from '../hooks/useCoordinate';
-import { div } from 'framer-motion/client';
-
-// Define a custom icon to ensure proper display
-const customIcon = new L.Icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-// This function maps the raw inputData object to a Chart.js data object.
-const mapInputDataToChart = (inputData) => {
-  // Ensure inputData exists and contains a valid data property
-  if (!inputData || !inputData.data) return null;
-  const keys = Object.keys(inputData.data);
-  if (keys.length === 0) return null;
-
-  // Use the length of the first pollutant's history to create labels.
-  // Here we simply label them as T1, T2, …, Tn.
-  const labels = inputData.data[keys[0]].history.map((_, index) => `T${index + 1}`);
-
-  // Define a color mapping for each key.
-  const colors = {
-    co: 'rgba(75, 192, 192, 1)',
-    no: 'rgba(54, 162, 235, 1)',
-    no2: 'rgba(255, 206, 86, 1)',
-    o3: 'rgba(255, 99, 132, 1)',
-    pm10: 'rgba(153, 102, 255, 1)',
-    pm25: 'rgba(255, 159, 64, 1)',
-    relativehumidity: 'rgba(201, 203, 207, 1)',
-    so2: 'rgba(100, 100, 100, 1)',
-    temperature: 'rgba(0, 0, 0, 1)',
-    um003: 'rgba(100, 100, 255, 1)', // Added a color mapping for um003
-  };
-
-  // Build the datasets array from the inputData keys.
-  const datasets = keys.map((key) => ({
-    label: `${key.toUpperCase()} (${inputData.data[key].unit})`,
-    data: inputData.data[key].history,
-    fill: false,
-    borderColor: colors[key] || 'rgba(0, 0, 0, 1)',
-    tension: 0.3,
-  }));
-
-  return { labels, datasets };
-};
-
-function AirQualityChart({ inputData }) {
-  const mappedChart = mapInputDataToChart(inputData);
-
-  // Return a fallback if no valid data is available.
-  if (!mappedChart) {
-    return <p>No data available to display.</p>;
-  }
-
-  // Use the mappedChart directly as the Chart.js data.
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'Air Quality',
-      },
-    },
-  };
-
-  return (<div>
-    <a className='mt-5 text-center items-center flex justify-center mx-auto text-blue-500 underline' href="/gases">Confused? Here's a Rundown</a>
-    <Line data={mappedChart} options={options} />
-    </div>
-  )
-}
-
-function LocationClickHandler({ setMarker, setPosition }) {
-  useMapEvents({
-    click(e) {
-      console.log("Clicked at:", e.latlng);
-      // Update both the marker and the position
-      setMarker(e.latlng);
-      setPosition([e.latlng.lat, e.latlng.lng]);
-    },
-  });
-  return null;
-}
-
-function OpenStreetMap({ position, setPosition }) {
-  const [marker, setMarker] = useState(null);
-
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setPosition([pos.coords.latitude, pos.coords.longitude]);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          setPosition([20.5937, 78.9629]); // Fallback coordinates (e.g., center of India)
-        }
-      );
-    } else {
-      setPosition([20.5937, 78.9629]);
-    }
-  }, [setPosition]);
-
-  if (!position) {
-    return <p>Loading map...</p>;
-  }
-
+const Hero = () => {
   return (
-    <div>
-
-    <MapContainer center={position} zoom={13} style={{ height: '400px', width: '100%' }}>
-      <TileLayer
-         attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <LocationClickHandler setMarker={setMarker} setPosition={setPosition} />
-      {marker && (
-        <Marker position={marker} icon={customIcon} />
-      )}
-    </MapContainer>
-    </div>
-  );
-}
-
-function Hero() {
-  const [position, setPosition] = useState([20.5937, 78.9629]);
-  // Retrieve the chart data using the custom hook
-  const chartData = useCoordinate(position[0], position[1]);
-
-  return (
-    <div className="flex flex-col items-center justify-center mt-10 lg:mt-20">
-      <div className="text-center px-4">
-        <h1 className="text-4xl recursive-bold md:text-8xl font-bold lg:max-w-4xl mx-auto mt-20 text-[#00022b] mb-6">
-          Predict Air Quality Seamlessly
-        </h1>
-        <p className="text-[#00022b] mb-10 text-lg lg:text-2xl opacity-80 max-w-2xl mx-auto">
-          Our objective is to develop a state-of-the-art forecasting tool that can accurately predict air quality levels in economically challenged countries.
-        </p>
-        <a 
-          href='#map' 
-          className="mt-8 px-6 py-3 bg-[#ffb54c] cursor-pointer text-white font-semibold rounded-full hover:bg-opacity-90 transition duration-300 shadow-lg"
+    <main className="block opacity-100" style={{ boxSizing: "border-box" }}>
+      <div
+        className="relative flex justify-center overflow-visible pb-24 pt-0"
+        style={{ boxSizing: "border-box" }}
+      >
+        <div
+          className="mx-auto flex max-w-none justify-center transition-all duration-200"
+          style={{ boxSizing: "border-box", width: "94vw" }}
         >
-          Explore Now
-        </a>
-      </div>
-      <div id='map' className="w-full max-w-4xl mx-auto mt-40 ">
+          <div
+            className="absolute inset-y-0 left-0 overflow-hidden transition-all duration-200"
+            style={{
+              transform: "matrix(1, 0, 0, 1, 0, 1.58803)",
+              transformStyle: "preserve-3d",
+              willChange: "transform",
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              className="relative overflow-hidden rounded-2xl"
+              style={{
+                maskImage: "-webkit-radial-gradient(center, rgb(255, 255, 255), rgb(0, 0, 0)",
+                boxSizing: "border-box",
+                zIndex: 0,
+              }}
+            >
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-[-2px] z-[1] h-[480px] bg-gradient-to-t from-[#131313] to-transparent"
+                style={{ boxSizing: "border-box" }}
+              ></div>
+              <div
+                className="relative overflow-hidden rounded-2xl"
+                style={{
+                  width: "48vw",
+                  minWidth: "288px",
+                  maxWidth: "768px",
+                  height: "698.4px",
+                  minHeight: "480px",
+                  color: "rgb(255, 255, 255)",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Replaced video with image */}
+                <img
+                  src={gagan}
+                  alt="Hero background"
+                  style={{
+                    objectFit: "cover",
+                    zIndex: -100,
+                    backgroundPosition: "50% 50%",
+                    backgroundSize: "cover",
+                    width: "100%",
+                    height: "698.4px",
+                    margin: "auto",
+                    position: "absolute",
+                    inset: "0", // Changed from "-698.4px -737.275px" to "0" to fill container
+                    boxSizing: "border-box",
+                    verticalAlign: "baseline",
+                    display: "block",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
 
-        <OpenStreetMap setPosition={setPosition} position={position} />
-        <div className='mt-20'></div>
-        <AirQualityChart inputData={chartData} />
+          <div
+            className="relative z-[2] flex h-[768px] min-h-[768px] max-h-[1200px] w-full items-center justify-center pointer-events-none"
+            style={{ boxSizing: "border-box" }}
+          >
+            <div
+              className="pointer-events-auto relative text-left"
+              style={{ boxSizing: "border-box" }}
+            >
+              <h1
+                className="m-0 text-[184.32px] leading-[165.888px] font-normal"
+                style={{ boxSizing: "border-box" }}
+              >
+                we create
+                <br style={{ boxSizing: "border-box" }} />
+                <span
+                  className="font-ivypresto italic font-light"
+                  style={{ boxSizing: "border-box" }}
+                >
+                  thumb-stopping
+                  <br style={{ boxSizing: "border-box" }} />
+                </span>
+                visuals
+              </h1>
+            </div>
+
+            <div
+              className="pointer-events-auto absolute inset-x-0 bottom-0 flex w-full items-center justify-between border-t border-[#363636] px-3 py-3"
+              style={{ boxSizing: "border-box" }}
+            >
+              <a
+                href="/case/brouwerij-t-ij-gouden-ij-campagne"
+                className="block max-w-full overflow-hidden"
+                style={{
+                  color: "rgb(247, 246, 240)",
+                  textDecoration: "none",
+                  transitionProperty: "none",
+                  backgroundColor: "rgba(0, 0, 0, 0)",
+                  cursor: "none",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  className="font-ivypresto italic text-[#838383] text-[16.8px] font-light"
+                  style={{ boxSizing: "border-box" }}
+                >
+                  our latest project
+                </div>
+                <div style={{ color: "rgb(203, 203, 203)", boxSizing: "border-box" }}>
+                  brouwerij t' ij
+                </div>
+              </a>
+
+              <div
+                className="relative flex w-60 items-center justify-center overflow-hidden"
+                style={{ boxSizing: "border-box" }}
+              >
+                <div
+                  className="flex items-center justify-center gap-6"
+                  style={{
+                    transform: "matrix(1, 0, 0, 1, 36.5169, 0)",
+                    transformStyle: "preserve-3d",
+                    willChange: "transform",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "3px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "6px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "9.6px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "12px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "15px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "12px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "9.6px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "6px", boxSizing: "border-box" }}
+                  ></div>
+                  <div
+                    className="w-px bg-[#363636]"
+                    style={{ height: "3px", boxSizing: "border-box" }}
+                  ></div>
+                </div>
+              </div>
+
+              <a
+                href="/about"
+                className="flex max-w-full gap-3 overflow-hidden"
+                style={{
+                  color: "rgb(247, 246, 240)",
+                  textDecoration: "none",
+                  transitionProperty: "none",
+                  backgroundColor: "rgba(0, 0, 0, 0)",
+                  cursor: "none",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  className="text-[16.8px] text-[#838383]"
+                  style={{ boxSizing: "border-box" }}
+                >
+                  creative production
+                  <br style={{ boxSizing: "border-box" }} />
+                  studio based in{" "}
+                  <span
+                    className="font-ivypresto italic font-light"
+                    style={{ boxSizing: "border-box" }}
+                  >
+                    amsterdam
+                  </span>
+                </div>
+              </a>
+            </div>
+
+            <div
+              className="absolute right-4 top-4 flex items-center gap-3"
+              style={{ boxSizing: "border-box" }}
+            >
+              <a
+                href="#"
+                className="block h-3 w-4 rounded-full bg-[#00ff0b] opacity-[0.10348]"
+                style={{
+                  willChange: "opacity",
+                  color: "rgb(247, 246, 240)",
+                  textDecoration: "none",
+                  transitionProperty: "none",
+                  maxWidth: "100%",
+                  cursor: "none",
+                  boxSizing: "border-box",
+                }}
+              ></a>
+            </div>
+          </div>
+        </div>
       </div>
-      <FAQ />
-    </div>
+    </main>
   );
-}
+};
 
 export default Hero;
